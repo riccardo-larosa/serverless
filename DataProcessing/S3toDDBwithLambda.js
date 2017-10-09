@@ -39,6 +39,9 @@ exports.handler = (event, context, callback) => {
 function buildRequests(buf) {
     // create a new array of type "item" by parsing the input file
     const requestItems = buf.toString().trim().split('\n').map((json) => {
+
+        // you should check you are parsing a correct json record
+        // and handle any errors
         const item = JSON.parse(json);
         item.StatusTime = (new Date(item.StatusTime)).getTime();
 
@@ -63,7 +66,7 @@ function processRequests(requestItems) {
 
     while (requestItems.length > 0) {
         // process 25 records at the time
-        console.log('processed records: ' + requestItems.length );
+        console.log('remaining records to be processed: ' + requestItems.length );
         batches.push(writeRecords(requestItems.splice(0, 25)));
     }
     // makes sure all are processed
