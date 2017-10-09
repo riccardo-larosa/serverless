@@ -5,6 +5,7 @@ const AWS = require('aws-sdk');
 const S3 = new AWS.S3();
 const DynamoDB = new AWS.DynamoDB.DocumentClient();
 
+// make sure you add an environment name to lambda
 const TABLE_NAME = process.env.TABLE_NAME;
 const THROTTLING_ERRORS = [
     'ProvisionedThroughputExceededException',
@@ -34,12 +35,17 @@ exports.handler = (event, context, callback) => {
 };
 
 // Take the json input and transform it (by adding StatusTime)
-// to appropiate format for DynamoDB
+// to appropriate format for DynamoDB
 function buildRequests(buf) {
+    // create a new array of type "item" by parsing the input file
     const requestItems = buf.toString().trim().split('\n').map((json) => {
         const item = JSON.parse(json);
         item.StatusTime = (new Date(item.StatusTime)).getTime();
-        //console.log('request build: ' + requestItems.length);
+
+        // DynamoDB expects a JSON map with PutRequest
+        //  - Perform a PutItem operation on the specified item.
+        //   The item to be put is identified by an Item subelement:
+        //   - Item - A map of attributes and their values.
         return {
             PutRequest: {
                 Item: item,
@@ -74,6 +80,8 @@ function writeRecords(requestItems) {
     };
 
     return new Promise((resolve, reject) => {
+
+        // DynamoDB is busy so we need to slow down and retry
         function retry(retryRequestItems) {
             const delay = ((Math.random() * (3 - 1)) + 1) * 1000;
 
@@ -82,7 +90,11 @@ function writeRecords(requestItems) {
                 writeRecords(retryRequestItems).then(resolve).catch(reject);
             }, delay);
         }
-        console.log('writing to DDB');
+
+        // The logic for DynamoDB.batchWrite() is funky, make sure
+        // you read the documentation:
+        // http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchWriteItem.html
+        // because you may get errors for unprocessed data and for throttling
         DynamoDB.batchWrite(params, (err, data) => {
             if (data && data.UnprocessedItems[TABLE_NAME]) {
                 retry(data.UnprocessedItems[TABLE_NAME]);
