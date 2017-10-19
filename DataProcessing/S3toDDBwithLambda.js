@@ -1,3 +1,14 @@
+// use this function when you have a file in S3
+// made of JSON elements and want to load that
+// info in DynamoDB
+// although you should be looking at
+// `AWS.DynamoDB.DocumentClient()` as an alternative
+// Since this assumes you have a lot of JSON objects
+// it's using DynamoDB.batchWrite(), make sure
+// you read the documentation:
+// http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchWriteItem.html
+
+
 'use strict';
 
 const AWS = require('aws-sdk');
@@ -5,7 +16,7 @@ const AWS = require('aws-sdk');
 const S3 = new AWS.S3();
 const DynamoDB = new AWS.DynamoDB.DocumentClient();
 
-// make sure you add an environment name to lambda
+// make sure you add an environment TABLE_NAME to lambda
 const TABLE_NAME = process.env.TABLE_NAME;
 const THROTTLING_ERRORS = [
     'ProvisionedThroughputExceededException',
